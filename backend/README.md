@@ -95,3 +95,30 @@ in PostgreSQL compatibility mode. They exercise authentication, CRUD, role restr
 validation, duplicate conflicts, deactivation, logout, token expiry, password hashing/change,
 last-admin protection and reporting-cycle validation. These tests need no development database.
 H2 tests do not establish PostgreSQL runtime compatibility; run against PostgreSQL before deployment.
+
+## Demo database records
+
+After the application has applied migrations, open pgAdmin's Query Tool on
+`leave_management_db` (local PostgreSQL port 5433 for this setup), open
+[`sql/seed_demo_employees.sql`](sql/seed_demo_employees.sql), and execute the whole script.
+The script is development-only and is not an automatic Flyway migration.
+It inserts three departments, two managers, three active employees and one inactive employee.
+It can be rerun without duplicating accounts or overwriting existing profiles, passwords or roles.
+
+New demo accounts use password `DemoPassword123!` (stored as BCrypt hashes):
+
+| Email | Role | Active |
+| --- | --- | --- |
+| aung.demo@example.com | MANAGER | Yes |
+| hla.demo@example.com | MANAGER | Yes |
+| zay.demo@example.com | EMPLOYEE | Yes |
+| su.demo@example.com | EMPLOYEE | Yes |
+| min.demo@example.com | EMPLOYEE | Yes |
+| ei.demo@example.com | EMPLOYEE | No |
+
+Log in with the existing administrator to call `GET /api/employees?page=0&size=100`
+and `GET /api/departments`. Employee details use the `id` from that list:
+`GET /api/employees/{id}`. Demo managers and employees can log in and call
+`GET /api/auth/me`; listing all employees remains ADMIN-only. The inactive account returns 401.
+All these endpoints query PostgreSQL through JDBC; no mock records are hardcoded in the backend.
+Frontend display requires the frontend to call these endpoints separately.
