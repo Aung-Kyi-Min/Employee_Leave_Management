@@ -1,0 +1,81 @@
+export const DEMO_PASSWORD = 'password'
+
+export const employees = [
+  {
+    employeeId: 1,
+    employeeNumber: 'EMP-001',
+    fullName: 'Aung Kyi Min',
+    email: 'aung@company.com',
+    jobTitle: 'Engineering Manager',
+    department: 'Engineering',
+    manager: null,
+    hireDate: '2019-03-11',
+    isActive: true,
+    role: 'Manager',
+  },
+  {
+    employeeId: 2,
+    employeeNumber: 'EMP-014',
+    fullName: 'Hla Hla Win',
+    email: 'hla@company.com',
+    jobTitle: 'People Operations Lead',
+    department: 'Human Resources',
+    manager: null,
+    hireDate: '2018-07-02',
+    isActive: true,
+    role: 'HR',
+  },
+  {
+    employeeId: 3,
+    employeeNumber: 'EMP-028',
+    fullName: 'Zay Yar Win Htet',
+    email: 'zay@company.com',
+    jobTitle: 'Software Engineer',
+    department: 'Engineering',
+    manager: 'Aung Kyi Min',
+    hireDate: '2022-01-17',
+    isActive: true,
+    role: 'Employee',
+  },
+  {
+    employeeId: 4,
+    employeeNumber: 'EMP-033',
+    fullName: 'Su Su Aung',
+    email: 'susu@company.com',
+    jobTitle: 'Product Designer',
+    department: 'Product',
+    manager: 'Aung Kyi Min',
+    hireDate: '2021-09-06',
+    isActive: true,
+    role: 'Employee',
+  },
+  {
+    employeeId: 5,
+    employeeNumber: 'EMP-041',
+    fullName: 'Min Khant',
+    email: 'minkhant@company.com',
+    jobTitle: 'Accountant',
+    department: 'Finance',
+    manager: 'Hla Hla Win',
+    hireDate: '2020-11-23',
+    isActive: true,
+    role: 'Employee',
+  },
+  {
+    employeeId: 6,
+    employeeNumber: 'EMP-052',
+    fullName: 'Ei Ei Phyo',
+    email: 'eiei@company.com',
+    jobTitle: 'Support Specialist',
+    department: 'Customer Support',
+    manager: 'Hla Hla Win',
+    hireDate: '2023-04-10',
+    isActive: false,
+    role: 'Employee',
+  },
+]
+
+export function findEmployeeByEmail(email) {
+  const normalized = email.trim().toLowerCase()
+  return employees.find((employee) => employee.email === normalized) ?? null
+}
