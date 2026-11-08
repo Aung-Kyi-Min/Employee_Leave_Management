@@ -23,3 +23,6 @@ frontend/dist/
 
 # Logs
 *.log
+
+# Private Spring Boot database credentials
+backend/application-local.properties
