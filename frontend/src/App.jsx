@@ -1,34 +1,39 @@
-// import { useState } from 'react'
-import { useEffect, useState } from 'react';
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { useState } from 'react'
+import { employees } from './data/mock'
+import EmployeesPage from './pages/EmployeesPage'
+import LoginPage from './pages/LoginPage'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
-  const [message, setMessage] = useState('Connecting...');
+const SESSION_KEY = 'elm-session'
 
-  useEffect(() => {
-    fetch('/api/health')
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('API request failed');
-        }
-        return response.json();
-      })
-      .then((data) => setMessage(data.message))
-      .catch(() => setMessage('Backend connection failed'));
-  }, []);
+function readSession() {
+  const raw = sessionStorage.getItem(SESSION_KEY)
+  if (!raw) {
+    return null
+  }
 
-  return (
-    <main style={{ padding: '30px' }}>
-      <h1>Employee Leave Management System</h1>
-      <h2>Backend Connection Status</h2>
-      <p>{message}</p>
-    </main>
-  );
+  const employeeId = Number(raw)
+  return employees.find((employee) => employee.employeeId === employeeId && employee.isActive) ?? null
 }
 
+function App() {
+  const [currentUser, setCurrentUser] = useState(readSession)
+
+  function handleLogin(employee) {
+    sessionStorage.setItem(SESSION_KEY, String(employee.employeeId))
+    setCurrentUser(employee)
+  }
+
+  function handleSignOut() {
+    sessionStorage.removeItem(SESSION_KEY)
+    setCurrentUser(null)
+  }
+
+  if (!currentUser) {
+    return <LoginPage onLogin={handleLogin} />
+  }
+
+  return <EmployeesPage currentUser={currentUser} onSignOut={handleSignOut} />
+}
 
 export default App
