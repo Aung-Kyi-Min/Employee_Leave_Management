@@ -1,5 +1,9 @@
 $kind: http-request
 name: auth/me
-url: ""
+url: " http://localhost:8080/api/auth/me"
 method: GET
+auth:
+  type: bearer
+  credentials:
+    token: 0ZEIQKwTcKJQKR8Vgo_c6E-YRqJu0WEfRgNMU0r04MQ
 order: 2000
