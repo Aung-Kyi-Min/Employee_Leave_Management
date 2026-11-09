@@ -13,6 +13,7 @@ frontend/dist/
 .env
 .env.*
 !.env.example
+backend/application-local.properties
 
 # IDE
 .vscode/
