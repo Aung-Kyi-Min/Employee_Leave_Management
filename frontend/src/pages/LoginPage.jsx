@@ -31,8 +31,7 @@ export default function LoginPage({ onLogin, sessionError }) {
         <p className="eyebrow">Employee Leave Management</p>
         <h1>Sign in</h1>
         <p className="lede">
-          Use a mock employee account to apply for leave and open the directory. Every active account uses the password{' '}
-          <code>{DEMO_PASSWORD}</code>.
+          Sign in with your employee account to access your profile and leave requests.
         </p>
 
         <form onSubmit={handleSubmit} className="login-form">
