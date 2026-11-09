@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { employees } from '../data/mock'
+import { useEffect, useMemo, useState } from 'react'
+import { employeeApi } from '../api/client'
 
 function formatDate(value) {
   return new Intl.DateTimeFormat('en-GB', {
@@ -9,8 +9,56 @@ function formatDate(value) {
   }).format(new Date(`${value}T00:00:00`))
 }
 
-export default function EmployeesPage({ currentUser, onSignOut }) {
+export default function EmployeesPage({ currentUser }) {
   const [query, setQuery] = useState('')
+  const [rows, setRows] = useState([])
+  const [departments, setDepartments] = useState([])
+  const [page, setPage] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [attempt, setAttempt] = useState(0)
+  const isAdmin = currentUser.roles.includes('ADMIN')
+
+  useEffect(() => {
+    const controller = new AbortController()
+    async function load() {
+      setLoading(true)
+      setError('')
+      setRows([])
+      try {
+        if (isAdmin) {
+          const [people, teams] = await Promise.all([
+            employeeApi.list(page, controller.signal),
+            employeeApi.departments(controller.signal),
+          ])
+          if (!controller.signal.aborted) {
+            setRows(people)
+            setDepartments(teams)
+          }
+        } else {
+          setRows([currentUser])
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') setError(err.message)
+      } finally {
+        if (!controller.signal.aborted) setLoading(false)
+      }
+    }
+    load()
+    return () => controller.abort()
+  }, [currentUser, isAdmin, page, attempt])
+
+  const employees = rows.map((employee) => ({
+    ...employee,
+    employeeId: employee.id,
+    isActive: employee.active,
+    role: employee.roles.join(', '),
+    department: departments.find((d) => d.id === employee.departmentId)?.name
+      ?? `Department #${employee.departmentId}`,
+    manager: employee.managerId == null ? null
+      : rows.find((person) => person.id === employee.managerId)?.fullName
+        ?? `Employee #${employee.managerId}`,
+  }))
 
   const visibleEmployees = useMemo(() => {
     const normalized = query.trim().toLowerCase()
@@ -31,31 +79,19 @@ export default function EmployeesPage({ currentUser, onSignOut }) {
         .toLowerCase()
         .includes(normalized),
     )
-  }, [query])
+  }, [query, employees])
 
   const activeCount = employees.filter((employee) => employee.isActive).length
 
   return (
-    <div className="app-shell">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Employee Leave Management</p>
-          <h1>Employees</h1>
-        </div>
-        <div className="session">
-          <div>
-            <strong>{currentUser.fullName}</strong>
-            <span>{currentUser.role} · {currentUser.department}</span>
-          </div>
-          <button type="button" className="ghost" onClick={onSignOut}>
-            Sign out
-          </button>
-        </div>
-      </header>
+    <>
+      <div className="page-heading">
+        <h1>{isAdmin ? 'Employees' : 'My profile'}</h1>
+      </div>
 
       <section className="summary">
         <article>
-          <span>People</span>
+          <span>People on this page</span>
           <strong>{employees.length}</strong>
         </article>
         <article>
@@ -70,7 +106,7 @@ export default function EmployeesPage({ currentUser, onSignOut }) {
 
       <section className="panel">
         <div className="panel-head">
-          <h2>Directory</h2>
+          <h2>{isAdmin ? 'Directory' : 'Employee details'}</h2>
           <input
             type="search"
             value={query}
@@ -80,7 +116,11 @@ export default function EmployeesPage({ currentUser, onSignOut }) {
           />
         </div>
 
-        {visibleEmployees.length === 0 ? (
+        {loading ? <p role="status">Loading employees…</p> : error ? (
+          <div><p className="form-error" role="alert">{error}</p>
+            <button type="button" onClick={() => setAttempt(attempt + 1)}>Retry</button>
+          </div>
+        ) : visibleEmployees.length === 0 ? (
           <p className="empty">No employees match that search.</p>
         ) : (
           <div className="table-wrap">
@@ -101,7 +141,7 @@ export default function EmployeesPage({ currentUser, onSignOut }) {
                 {visibleEmployees.map((employee) => (
                   <tr
                     key={employee.employeeId}
-                    className={employee.employeeId === currentUser.employeeId ? 'is-current' : undefined}
+                    className={employee.employeeId === currentUser.id ? 'is-current' : undefined}
                   >
                     <td>{employee.employeeNumber}</td>
                     <td>
@@ -124,7 +164,12 @@ export default function EmployeesPage({ currentUser, onSignOut }) {
             </table>
           </div>
         )}
+        {isAdmin && <nav className="pagination" aria-label="Employee pages">
+          <button type="button" disabled={loading || page === 0} onClick={() => { setQuery(''); setPage(page - 1) }}>Previous</button>
+          <span>Page {page + 1} · Search applies to this page</span>
+          <button type="button" disabled={loading || Boolean(error) || rows.length < 20} onClick={() => { setQuery(''); setPage(page + 1) }}>Next</button>
+        </nav>}
       </section>
-    </div>
+    </>
   )
 }
