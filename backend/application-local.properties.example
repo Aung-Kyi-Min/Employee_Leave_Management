@@ -1,3 +1,9 @@
+# This file is ignored by Git. Set the password for your PostgreSQL leave_app user.
+# This is the DATABASE password, not the application admin login password.
+spring.datasource.url=jdbc:postgresql://localhost:5433/leave_management_db
+spring.datasource.username=postgres
+spring.datasource.password=akm1234%
+
 # Optional: uncomment to create the first admin when the employees table is empty.
 # app.bootstrap.email=admin@example.com
-# app.bootstrap.password=replace-with-a-local-password
+# app.bootstrap.password=akm1234%
