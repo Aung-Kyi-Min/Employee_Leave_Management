@@ -33,7 +33,7 @@
 }
 
 .login-card h1,
-.topbar h1 {
+.app-shell h1 {
   margin: 0;
   font-size: 40px;
   letter-spacing: -1px;
@@ -64,7 +64,9 @@
   color: var(--text-h);
 }
 
-input {
+input,
+select,
+textarea {
   width: 100%;
   box-sizing: border-box;
   border: 1px solid var(--border);
@@ -75,7 +77,14 @@ input {
   padding: 10px 12px;
 }
 
+textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
 input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
 button:focus-visible {
   outline: 2px solid #0f766e;
   outline-offset: 2px;
@@ -98,10 +107,18 @@ button.ghost {
   border: 1px solid var(--border);
 }
 
-.form-error {
+.form-error,
+.form-success {
   margin: 0;
-  color: #b42318;
   font-size: 14px;
+}
+
+.form-error {
+  color: #b42318;
+}
+
+.form-success {
+  color: #067647;
 }
 
 .demo-hint {
@@ -127,6 +144,96 @@ button.ghost {
 
 .session {
   text-align: right;
+}
+
+.nav {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+button.nav-link {
+  background: transparent;
+  color: var(--text-h);
+  border: 1px solid transparent;
+  padding: 8px 12px;
+}
+
+button.nav-link.active {
+  background: rgba(15, 118, 110, 0.12);
+  color: #0f766e;
+}
+
+.page-heading {
+  margin-top: 28px;
+}
+
+.page-heading .lede {
+  margin: 8px 0 0;
+}
+
+.summary.balances {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.summary small,
+.days-preview {
+  display: block;
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.days-preview {
+  margin: 0;
+}
+
+.leave-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.leave-form,
+.form-row {
+  display: grid;
+  gap: 14px;
+}
+
+.leave-form {
+  margin-top: 16px;
+}
+
+.form-row {
+  grid-template-columns: 1fr 1fr;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+button.chip {
+  background: transparent;
+  color: var(--text-h);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+button.chip.active {
+  background: rgba(15, 118, 110, 0.12);
+  border-color: transparent;
+  color: #0f766e;
+}
+
+td.reason {
+  white-space: normal;
+  min-width: 160px;
+  max-width: 240px;
 }
 
 .session span,
@@ -230,13 +337,39 @@ tr.is-current {
   background: #dcfae6;
 }
 
-.badge.inactive {
+.badge.inactive,
+.badge.rejected {
   color: #b42318;
   background: #fee4e2;
 }
 
+.badge.approved {
+  color: #067647;
+  background: #dcfae6;
+}
+
+.badge.pending {
+  color: #b54708;
+  background: #fef0c7;
+}
+
+.badge.cancelled {
+  color: #475467;
+  background: #f2f4f7;
+}
+
 .empty {
   margin: 18px 0 4px;
+}
+
+@media (max-width: 1000px) {
+  .leave-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .summary.balances {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 800px) {
@@ -248,16 +381,20 @@ tr.is-current {
     text-align: left;
   }
 
-  .session {
+  .session,
+  .filters {
     text-align: left;
+    justify-content: flex-start;
   }
 
-  .summary {
+  .summary,
+  .summary.balances,
+  .form-row {
     grid-template-columns: 1fr;
   }
 
   .login-card h1,
-  .topbar h1 {
+  .app-shell h1 {
     font-size: 32px;
   }
 }
