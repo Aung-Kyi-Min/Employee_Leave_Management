@@ -1,0 +1,23 @@
+$kind: http-request
+name: api/employees
+url: http://localhost:8080/api/employees
+method: POST
+body:
+  type: json
+  content: |-
+    {
+      "employeeNumber": "EMP-002",
+      "fullName": "Shine Demo",
+      "email": "kyaw.demo@example.com",
+      "password": "DemoPassword123!",
+      "departmentId": 2,
+      "managerId": 3,
+      "jobTitle": "Junior Developer",
+      "hireDate": "2026-11-08",
+      "roles": ["EMPLOYEE"]
+    } 
+auth:
+  type: bearer
+  credentials:
+    token: 0ZEIQKwTcKJQKR8Vgo_c6E-YRqJu0WEfRgNMU0r04MQ
+order: 3000
