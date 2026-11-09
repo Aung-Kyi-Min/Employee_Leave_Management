@@ -1,0 +1,12 @@
+$kind: http-request
+name: api/employees
+url: http://localhost:8080/api/employees?page=0&size=100
+method: GET
+queryParams:
+  page: "0"
+  size: "100"
+auth:
+  type: bearer
+  credentials:
+    token: 0ZEIQKwTcKJQKR8Vgo_c6E-YRqJu0WEfRgNMU0r04MQ
+order: 4000
