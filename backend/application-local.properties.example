@@ -8,7 +8,7 @@ spring.datasource.password=hein@12345
 # app.bootstrap.email=admin@example.com
 # app.bootstrap.password=hein@12345
 spring.datasource.url=jdbc:postgresql://localhost:5433/leave_management_db
-spring.datasource.username=leave_app
+spring.datasource.username=postgres
 spring.datasource.password=akm1234%
 
 # Optional: uncomment to create the first admin when the employees table is empty.
