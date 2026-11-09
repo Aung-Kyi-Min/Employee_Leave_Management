@@ -261,3 +261,16 @@ tr.is-current {
     font-size: 32px;
   }
 }
+
+.pagination {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
