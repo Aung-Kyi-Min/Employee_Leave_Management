@@ -9,7 +9,7 @@ function formatDate(value) {
   }).format(new Date(`${value}T00:00:00`))
 }
 
-export default function EmployeesPage({ currentUser, onSignOut }) {
+export default function EmployeesPage({ currentUser }) {
   const [query, setQuery] = useState('')
   const [rows, setRows] = useState([])
   const [departments, setDepartments] = useState([])
@@ -84,22 +84,10 @@ export default function EmployeesPage({ currentUser, onSignOut }) {
   const activeCount = employees.filter((employee) => employee.isActive).length
 
   return (
-    <div className="app-shell">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Employee Leave Management</p>
-          <h1>{isAdmin ? 'Employees' : 'My profile'}</h1>
-        </div>
-        <div className="session">
-          <div>
-            <strong>{currentUser.fullName}</strong>
-            <span>{currentUser.roles.join(', ')}</span>
-          </div>
-          <button type="button" className="ghost" onClick={onSignOut}>
-            Sign out
-          </button>
-        </div>
-      </header>
+    <>
+      <div className="page-heading">
+        <h1>{isAdmin ? 'Employees' : 'My profile'}</h1>
+      </div>
 
       <section className="summary">
         <article>
@@ -182,6 +170,6 @@ export default function EmployeesPage({ currentUser, onSignOut }) {
           <button type="button" disabled={loading || Boolean(error) || rows.length < 20} onClick={() => { setQuery(''); setPage(page + 1) }}>Next</button>
         </nav>}
       </section>
-    </div>
+    </>
   )
 }
