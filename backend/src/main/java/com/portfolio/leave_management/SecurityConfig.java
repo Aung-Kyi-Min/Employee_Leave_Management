@@ -34,6 +34,7 @@ public class SecurityConfig {
                 .accessDeniedHandler((req,res,ex)->error(res,403,"Access denied")))
             .authorizeHttpRequests(a->a.requestMatchers("/api/health","/api/auth/login").permitAll()
                 .requestMatchers("/api/employees/**","/api/departments").hasRole("ADMIN")
+                .requestMatchers("/api/leave-requests/assigned","/api/leave-requests/*/decision").hasRole("MANAGER")
                 .anyRequest().authenticated())
             .addFilterBefore(new OncePerRequestFilter() {
                 @Override protected void doFilterInternal(HttpServletRequest req,HttpServletResponse res,FilterChain chain) throws ServletException,IOException {

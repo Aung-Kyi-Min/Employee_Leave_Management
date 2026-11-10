@@ -14,7 +14,7 @@ public class ApiErrors {
     @ExceptionHandler(ResponseStatusException.class)
     ResponseEntity<?> status(ResponseStatusException e) { return ResponseEntity.status(e.getStatusCode()).body(Map.of("status",e.getStatusCode().value(),"message",e.getReason()==null?"Request failed":e.getReason())); }
     @ExceptionHandler(DataIntegrityViolationException.class)
-    ResponseEntity<?> conflict() { return ResponseEntity.status(409).body(Map.of("status",409,"message","Employee number or email already exists, or a referenced record conflicts")); }
+    ResponseEntity<?> conflict() { return ResponseEntity.status(409).body(Map.of("status",409,"message","A duplicate value or referenced record conflicts with this request")); }
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<?> validation(MethodArgumentNotValidException e) { return ResponseEntity.badRequest().body(Map.of("status",400,"message","Validation failed","errors",e.getBindingResult().getFieldErrors().stream().map(f->f.getField()+": "+f.getDefaultMessage()).toList())); }
     @ExceptionHandler({HttpMessageNotReadableException.class,MethodArgumentTypeMismatchException.class})

@@ -54,6 +54,13 @@ Credentials and tokens have redacted string representations to avoid Spring debu
 | PUT | `/api/employees/{id}` | ADMIN; full profile replacement; revoke target's tokens |
 | DELETE | `/api/employees/{id}` | ADMIN; deactivate and revoke tokens; 204 |
 | GET | `/api/departments` | ADMIN; existing department IDs and names |
+| GET | `/api/leave-types` | Authenticated; active leave types |
+| GET | `/api/leave-balances?year=2026` | Authenticated; own leave balances (current year by default) |
+| POST | `/api/leave-requests` | Authenticated; submit a request for the signed-in employee; 201 |
+| GET | `/api/leave-requests` | Authenticated; own requests |
+| GET | `/api/leave-requests/assigned` | MANAGER; pending requests assigned to the signed-in manager |
+| POST | `/api/leave-requests/{id}/decision` | Assigned MANAGER; `{ "decision": "APPROVED" | "REJECTED", "comments": "..." }` |
+| POST | `/api/leave-requests/{id}/cancel` | Authenticated; cancel own pending request; 204 |
 
 Login returns `accessToken`, `tokenType`, `expiresAt`, and `employee`.
 Keep tokens in frontend memory and clear them on logout or 401; do not put them in URLs.
@@ -87,6 +94,20 @@ Passwords can only be changed with the current password in this phase.
 Errors use `{ "status": 400, "message": "...", "errors": ["field: reason"] }`;
 `errors` appears on validation failures. Statuses: 400 invalid input, 401 authentication failure,
 403 insufficient role, 404 employee missing, 409 duplicate email/number or last-admin conflict.
+
+### Leave request rules
+
+Submit with `{ "leaveTypeId": 1, "startDate": "2026-12-01", "endDate": "2026-12-03", "reason": "..." }`.
+The server derives the employee from the bearer token and calculates weekdays (Monday–Friday), excluding no
+public holidays. Requests must include at least one weekday, stay within one calendar year, start today or
+later, have no date overlap with the employee's pending or approved requests, and fit the available balance.
+The available balance is entitled plus carried-forward days minus used and pending days. A yearly balance must already
+exist for the employee and leave type. Pending requests reserve balance when checked, preventing multiple
+pending requests from oversubscribing it. Requests needing approval are assigned to the employee's active
+manager with the MANAGER role. Approval deducts used days; rejection and cancellation do not. Leave types
+with `requires_approval=false` are auto-approved and deducted on submission. Only pending requests can be
+cancelled; an approved request needs an administrator to correct the balance through the normal data process.
+Submission, manager decisions and cancellation are written to `audit_logs`.
 
 ## Tests
 
