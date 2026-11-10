@@ -74,10 +74,10 @@ public class LeaveService {
     }
     @Transactional
     public Request decide(long manager,long request,Decision r) {
-        var rows=db.queryForList("SELECT lr.employee_id,lr.leave_type_id,lr.start_date,lr.total_days,a.decision FROM leave_requests lr JOIN approvals a ON a.request_id=lr.request_id AND a.approval_level=1 WHERE lr.request_id=? AND a.approver_id=? FOR UPDATE",request,manager);
+        var rows=db.queryForList("SELECT lr.employee_id,lr.leave_type_id,lr.start_date,lr.total_days,a.decision,lr.status FROM leave_requests lr JOIN approvals a ON a.request_id=lr.request_id AND a.approval_level=1 WHERE lr.request_id=? AND a.approver_id=? FOR UPDATE",request,manager);
         if(rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Assigned leave request not found");
         var row=rows.getFirst();
-        if(!"PENDING".equals(row.get("decision"))) throw new ResponseStatusException(HttpStatus.CONFLICT,"Leave request has already been decided");
+        if(!"PENDING".equals(row.get("decision")) || !"PENDING".equals(row.get("status"))) throw new ResponseStatusException(HttpStatus.CONFLICT,"Leave request has already been decided");
         String decision=r.decision().name();
         db.update("UPDATE approvals SET decision=?,comments=?,decided_at=CURRENT_TIMESTAMP WHERE request_id=? AND approval_level=1",decision,r.comments()==null?null:r.comments().trim(),request);
         db.update("UPDATE leave_requests SET status=?,updated_at=CURRENT_TIMESTAMP WHERE request_id=?",decision,request);

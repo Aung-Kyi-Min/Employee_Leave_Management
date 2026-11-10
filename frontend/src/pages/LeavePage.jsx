@@ -1,17 +1,17 @@
-import { useMemo, useState } from 'react'
-import {
-  countWeekdays,
-  leaveTypes,
-  loadLeaveRequests,
-  saveLeaveRequests,
-} from '../data/mock'
+import { useCallback, useEffect, useState } from 'react'
+import { leaveApi } from '../api/client'
 import { formatDate, statusLabel } from '../format'
 
 const STATUS_FILTERS = ['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED']
-const CURRENT_YEAR = new Date().getFullYear()
+const TODAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kuala_Lumpur', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+const CURRENT_YEAR = Number(TODAY.slice(0, 4))
 
-function timestamp() {
-  return new Date().toISOString()
+function countWeekdays(start, end) {
+  let days = 0
+  for (const date = new Date(`${start}T00:00:00Z`); date <= new Date(`${end}T00:00:00Z`); date.setUTCDate(date.getUTCDate() + 1)) {
+    if (date.getUTCDay() !== 0 && date.getUTCDay() !== 6) days++
+  }
+  return days
 }
 
 function formatSubmitted(value) {
@@ -22,13 +22,9 @@ function formatSubmitted(value) {
   }).format(new Date(value))
 }
 
-function rangesOverlap(startDate, endDate, request) {
-  return startDate <= request.endDate && request.startDate <= endDate
-}
-
-export default function LeavePage({ currentUser }) {
-  const [requests, setRequests] = useState(loadLeaveRequests)
-  const [leaveTypeId, setLeaveTypeId] = useState(String(leaveTypes[0].leaveTypeId))
+export default function LeavePage() {
+  const [requests, setRequests] = useState([])
+  const [leaveTypeId, setLeaveTypeId] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [reason, setReason] = useState('')
@@ -36,153 +32,89 @@ export default function LeavePage({ currentUser }) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  const year = CURRENT_YEAR
-  const selectedType = leaveTypes.find((type) => String(type.leaveTypeId) === leaveTypeId)
+  const [leaveTypes, setLeaveTypes] = useState([])
+  const [balances, setBalances] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+  const year = startDate ? Number(startDate.slice(0, 4)) : CURRENT_YEAR
   const totalDays = startDate && endDate ? countWeekdays(startDate, endDate) : 0
 
-  const myRequests = useMemo(
-    () =>
-      requests
-        .filter((request) => request.employeeId === currentUser.employeeId)
-        .sort((left, right) => right.submittedAt.localeCompare(left.submittedAt)),
-    [requests, currentUser.employeeId],
-  )
+  const refresh = useCallback(async (signal) => {
+    const [types, mine, balanceRows] = await Promise.all([
+      leaveApi.types(signal), leaveApi.mine(signal), leaveApi.balances(year, signal),
+    ])
+    if (signal?.aborted) return
+    setLeaveTypes(types)
+    setRequests(mine)
+    setBalances(balanceRows)
+    setLeaveTypeId((previous) => previous || String(types[0]?.id ?? ''))
+  }, [year])
 
-  const visibleRequests =
-    statusFilter === 'ALL'
-      ? myRequests
-      : myRequests.filter((request) => request.status === statusFilter)
+  useEffect(() => {
+    const controller = new AbortController()
+    // State updates inside refresh run after the API responses arrive.
+    // oxlint-disable-next-line react/set-state-in-effect
+    refresh(controller.signal).catch((err) => {
+      if (err.name !== 'AbortError') setError(err.message)
+    }).finally(() => { if (!controller.signal.aborted) setLoading(false) })
+    return () => controller.abort()
+  }, [refresh, attempt])
 
-  const balances = leaveTypes.map((type) => {
-    const mine = myRequests.filter(
-      (request) => request.leaveTypeId === type.leaveTypeId && request.startDate.startsWith(String(year)),
-    )
-    const used = mine
-      .filter((request) => request.status === 'APPROVED')
-      .reduce((sum, request) => sum + request.totalDays, 0)
-    const pending = mine
-      .filter((request) => request.status === 'PENDING')
-      .reduce((sum, request) => sum + request.totalDays, 0)
-    const remaining = type.isPaid ? type.entitledDays - used - pending : null
-    return { ...type, used, pending, remaining }
-  })
+  const visibleRequests = statusFilter === 'ALL' ? requests : requests.filter((item) => item.status === statusFilter)
 
-  function updateRequests(next) {
-    setRequests(next)
-    saveLeaveRequests(next)
-  }
-
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
     setSuccess('')
-
-    if (!selectedType) {
-      setError('Choose a leave type.')
-      return
-    }
-
-    if (!startDate || !endDate) {
-      setError('Choose a start and end date.')
-      return
-    }
-
-    if (endDate < startDate) {
-      setError('End date must be on or after the start date.')
-      return
-    }
-
-    if (totalDays === 0) {
-      setError('That range has no working days.')
-      return
-    }
-
-    if (totalDays > 30) {
-      setError('A request can cover at most 30 working days.')
-      return
-    }
-
-    const trimmedReason = reason.trim()
-    if (trimmedReason.length < 3) {
-      setError('Add a short reason.')
-      return
-    }
-
-    const balance = balances.find((item) => item.leaveTypeId === selectedType.leaveTypeId)
-    if (selectedType.isPaid && totalDays > balance.remaining) {
-      const dayLabel = balance.remaining === 1 ? 'day' : 'days'
-      setError(
-        `Only ${balance.remaining} ${selectedType.leaveName.toLowerCase()} ${dayLabel} remain this year, including pending requests.`,
-      )
-      return
-    }
-
-    const overlap = myRequests.some(
-      (request) =>
-        (request.status === 'PENDING' || request.status === 'APPROVED') &&
-        rangesOverlap(startDate, endDate, request),
-    )
-    if (overlap) {
-      setError('Those dates overlap a pending or approved request.')
-      return
-    }
-
-    const requestId = requests.reduce((max, request) => Math.max(max, request.requestId), 0) + 1
-    updateRequests([
-      {
-        requestId,
-        employeeId: currentUser.employeeId,
-        leaveTypeId: selectedType.leaveTypeId,
-        startDate,
-        endDate,
-        totalDays,
-        reason: trimmedReason,
-        status: 'PENDING',
-        submittedAt: timestamp(),
-      },
-      ...requests,
-    ])
-    setStartDate('')
-    setEndDate('')
-    setReason('')
     setError('')
-    setSuccess('Leave request submitted and is pending review.')
-    setStatusFilter('ALL')
+    if (startDate < TODAY || endDate < startDate || startDate.slice(0, 4) !== endDate.slice(0, 4) || totalDays < 1) {
+      setError('Choose dates from today within one calendar year, including at least one weekday.')
+      return
+    }
+    setBusy(true)
+    try {
+      const created = await leaveApi.create({ leaveTypeId: Number(leaveTypeId), startDate, endDate, reason: reason.trim() })
+      setSuccess(created.status === 'APPROVED' ? 'Leave request automatically approved.' : 'Leave request submitted for review.')
+      setReason('')
+      setStatusFilter('ALL')
+      await refresh()
+    } catch (err) { setError(err.message) }
+    finally { setBusy(false) }
   }
 
-  function cancelRequest(requestId) {
-    updateRequests(
-      requests.map((request) =>
-        request.requestId === requestId ? { ...request, status: 'CANCELLED' } : request,
-      ),
-    )
-    setSuccess('Pending request cancelled.')
+  async function cancelRequest(id) {
+    setBusy(true)
     setError('')
+    setSuccess('')
+    try {
+      await leaveApi.cancel(id)
+      setSuccess('Pending request cancelled.')
+      await refresh()
+    } catch (err) { setError(err.message) }
+    finally { setBusy(false) }
   }
-
-  const reviewer = currentUser.manager ?? 'HR'
 
   return (
     <>
       <div className="page-heading">
         <h1>Leave</h1>
         <p className="lede">
-          Apply for time away. Requests go to {reviewer} and stay in this browser until you clear site data.
+          Apply for time away and track your requests and yearly balances.
         </p>
       </div>
 
+      {loading && <p role="status">Loading leave data…</p>}
+      {error && <p className="form-error" role="alert">{error} <button type="button" onClick={() => { setLoading(true); setError(''); setAttempt((value) => value + 1) }}>Reload</button></p>}
+      {!loading && balances.length === 0 && <p className="empty">No leave balances allocated for {year}. Contact your administrator.</p>}
       <section className="summary balances" aria-label={`${year} leave balances`}>
         {balances.map((balance) => (
           <article key={balance.leaveTypeId}>
-            <span>{balance.leaveName}</span>
+            <span>{balance.leaveType}</span>
             <strong>
-              {balance.isPaid ? (
-                <>{balance.remaining} <span className="balance-unit">{balance.remaining === 1 ? 'day left' : 'days left'}</span></>
-              ) : 'Open'}
+              {balance.availableDays} <span className="balance-unit">{balance.availableDays === 1 ? 'day left' : 'days left'}</span>
             </strong>
             <small>
-              {balance.isPaid
-                ? `${balance.used} used · ${balance.pending} pending`
-                : 'No yearly cap'}
+              {balance.usedDays} used · {balance.pendingDays} pending
             </small>
           </article>
         ))}
@@ -194,12 +126,13 @@ export default function LeavePage({ currentUser }) {
             <h2>Request leave</h2>
           </div>
           <form className="leave-form" onSubmit={handleSubmit}>
+            <fieldset disabled={busy || loading} style={{ border: 0, padding: 0, margin: 0, display: 'contents' }}>
             <label>
               Leave type
               <select value={leaveTypeId} onChange={(event) => setLeaveTypeId(event.target.value)}>
                 {leaveTypes.map((type) => (
-                  <option key={type.leaveTypeId} value={type.leaveTypeId}>
-                    {type.leaveName}
+                  <option key={type.id} value={type.id}>
+                    {type.name}
                   </option>
                 ))}
               </select>
@@ -209,8 +142,9 @@ export default function LeavePage({ currentUser }) {
                 Start date
                 <input
                   type="date"
+                  min={TODAY}
                   value={startDate}
-                  onChange={(event) => setStartDate(event.target.value)}
+                  onChange={(event) => { if ((Number(event.target.value.slice(0, 4)) || CURRENT_YEAR) !== year) setLoading(true); setStartDate(event.target.value) }}
                   required
                 />
               </label>
@@ -218,6 +152,7 @@ export default function LeavePage({ currentUser }) {
                 End date
                 <input
                   type="date"
+                  min={startDate || TODAY}
                   value={endDate}
                   onChange={(event) => setEndDate(event.target.value)}
                   required
@@ -234,14 +169,14 @@ export default function LeavePage({ currentUser }) {
               <textarea
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
-                maxLength={500}
-                placeholder="Why you need this leave"
-                required
+                maxLength={2000}
+                placeholder="Why you need this leave (optional)"
               />
             </label>
-            {error ? <p className="form-error" role="alert">{error}</p> : null}
+
             {success ? <p className="form-success" role="status">{success}</p> : null}
-            <button type="submit">Submit request</button>
+            <button type="submit" disabled={busy || loading || !leaveTypeId}>{busy ? 'Saving…' : 'Submit request'}</button>
+            </fieldset>
           </form>
         </section>
 
@@ -281,16 +216,16 @@ export default function LeavePage({ currentUser }) {
                 </thead>
                 <tbody>
                   {visibleRequests.map((request) => {
-                    const type = leaveTypes.find((item) => item.leaveTypeId === request.leaveTypeId)
+                    const type = leaveTypes.find((item) => item.id === request.leaveTypeId)
                     return (
-                      <tr key={request.requestId}>
-                        <td>{type?.leaveName ?? 'Leave'}</td>
+                      <tr key={request.id}>
+                        <td>{request.leaveType || type?.name || 'Leave'}</td>
                         <td>
                           {formatDate(request.startDate)}
                           {request.endDate === request.startDate ? '' : ` – ${formatDate(request.endDate)}`}
                         </td>
                         <td>{request.totalDays}</td>
-                        <td className="reason">{request.reason}</td>
+                        <td className="reason">{request.reason || '—'}{request.approvalComments && <small> · Reviewer: {request.approvalComments}</small>}</td>
                         <td>{formatSubmitted(request.submittedAt)}</td>
                         <td>
                           <span className={`badge ${request.status.toLowerCase()}`}>
@@ -302,7 +237,8 @@ export default function LeavePage({ currentUser }) {
                             <button
                               type="button"
                               className="ghost"
-                              onClick={() => cancelRequest(request.requestId)}
+                              disabled={busy}
+                              onClick={() => cancelRequest(request.id)}
                             >
                               Cancel
                             </button>
