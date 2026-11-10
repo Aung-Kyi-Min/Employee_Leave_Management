@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { employeeApi, request, session } from './api/client'
+import AdminDashboard from './pages/AdminDashboard'
 import EmployeesPage from './pages/EmployeesPage'
 import LeavePage from './pages/LeavePage'
 import LoginPage from './pages/LoginPage'
+import ManagerDashboard from './pages/ManagerDashboard'
 import './App.css'
 
 function App() {
@@ -10,7 +12,7 @@ function App() {
   const [loading, setLoading] = useState(Boolean(session.token()))
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
-  const [page, setPage] = useState('leave')
+  const [page, setPage] = useState(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -37,6 +39,7 @@ function App() {
 
   function handleLogin(employee) {
     setError('')
+    setPage(null)
     setCurrentUser(employee)
   }
 
@@ -58,22 +61,47 @@ function App() {
     </section></main>
   )
   if (!currentUser) return <LoginPage onLogin={handleLogin} sessionError={error} />
+
+  const isAdmin = currentUser.roles.includes('ADMIN')
+  const isManager = currentUser.roles.includes('MANAGER')
+  const pages = [
+    ...(isAdmin ? [{ id: 'admin', label: isManager ? 'Admin' : 'Dashboard' }] : []),
+    ...(isManager ? [{ id: 'manager', label: isAdmin ? 'Manager' : 'Dashboard' }] : []),
+    { id: 'leave', label: 'Leave' },
+    { id: 'employees', label: isAdmin ? 'Employees' : 'My profile' },
+  ]
+  const activePage = pages.find((item) => item.id === page)?.id ?? pages[0].id
+
   return <div className="app-shell">
     <header className="topbar">
-      <div><p className="eyebrow">Employee Leave Management</p></div>
+      <div className="brand">
+        <p>Employee Leave Management</p>
+      </div>
       <div className="session">
-        <div><strong>{currentUser.fullName}</strong><span>{currentUser.roles.join(', ')}</span></div>
+        <div className="session-identity"><strong>{currentUser.fullName}</strong><span>{currentUser.roles.join(', ')}</span></div>
         <button type="button" className="ghost" onClick={handleSignOut}>Sign out</button>
       </div>
     </header>
     <nav className="nav" aria-label="Main navigation">
-      <button type="button" className={`nav-link ${page === 'leave' ? 'active' : ''}`} aria-current={page === 'leave' ? 'page' : undefined} onClick={() => setPage('leave')}>Leave</button>
-      <button type="button" className={`nav-link ${page === 'employees' ? 'active' : ''}`} aria-current={page === 'employees' ? 'page' : undefined} onClick={() => setPage('employees')}>{currentUser.roles.includes('ADMIN') ? 'Employees' : 'My profile'}</button>
+      {pages.map(({ id, label }) => (
+        <button
+          key={id}
+          type="button"
+          className={activePage === id ? 'nav-link active' : 'nav-link'}
+          aria-current={activePage === id ? 'page' : undefined}
+          onClick={() => setPage(id)}
+        >
+          {label}
+        </button>
+      ))}
     </nav>
     {error && <p className="form-error" role="alert">{error}</p>}
-    {page === 'leave'
-      ? <LeavePage key={currentUser.id} currentUser={{ ...currentUser, employeeId: currentUser.id }} />
-      : <EmployeesPage currentUser={currentUser} />}
+    <main>
+      {activePage === 'admin' && <AdminDashboard onOpenDirectory={() => setPage('employees')} />}
+      {activePage === 'manager' && <ManagerDashboard />}
+      {activePage === 'leave' && <LeavePage key={currentUser.id} currentUser={{ ...currentUser, employeeId: currentUser.id }} />}
+      {activePage === 'employees' && <EmployeesPage currentUser={currentUser} />}
+    </main>
   </div>
 }
 

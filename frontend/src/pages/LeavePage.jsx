@@ -5,6 +5,7 @@ import {
   loadLeaveRequests,
   saveLeaveRequests,
 } from '../data/mock'
+import { formatDate, statusLabel } from '../format'
 
 const STATUS_FILTERS = ['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED']
 const CURRENT_YEAR = new Date().getFullYear()
@@ -13,24 +14,12 @@ function timestamp() {
   return new Date().toISOString()
 }
 
-function formatDate(value) {
-  return new Intl.DateTimeFormat('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(`${value}T00:00:00`))
-}
-
 function formatSubmitted(value) {
   return new Intl.DateTimeFormat('en-GB', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
   }).format(new Date(value))
-}
-
-function statusLabel(status) {
-  return status.charAt(0) + status.slice(1).toLowerCase()
 }
 
 function rangesOverlap(startDate, endDate, request) {
@@ -185,7 +174,11 @@ export default function LeavePage({ currentUser }) {
         {balances.map((balance) => (
           <article key={balance.leaveTypeId}>
             <span>{balance.leaveName}</span>
-            <strong>{balance.isPaid ? balance.remaining : 'Open'}</strong>
+            <strong>
+              {balance.isPaid ? (
+                <>{balance.remaining} <span className="balance-unit">{balance.remaining === 1 ? 'day left' : 'days left'}</span></>
+              ) : 'Open'}
+            </strong>
             <small>
               {balance.isPaid
                 ? `${balance.used} used · ${balance.pending} pending`
@@ -198,7 +191,7 @@ export default function LeavePage({ currentUser }) {
       <div className="leave-layout">
         <section className="panel">
           <div className="panel-head">
-            <h2>Apply</h2>
+            <h2>Request leave</h2>
           </div>
           <form className="leave-form" onSubmit={handleSubmit}>
             <label>
@@ -254,13 +247,14 @@ export default function LeavePage({ currentUser }) {
 
         <section className="panel">
           <div className="panel-head">
-            <h2>History</h2>
+            <h2 id="leave-history">History</h2>
             <div className="filters" role="group" aria-label="Filter by status">
               {STATUS_FILTERS.map((status) => (
                 <button
                   key={status}
                   type="button"
                   className={statusFilter === status ? 'chip active' : 'chip'}
+                  aria-pressed={statusFilter === status}
                   onClick={() => setStatusFilter(status)}
                 >
                   {status === 'ALL' ? 'All' : statusLabel(status)}
@@ -272,7 +266,7 @@ export default function LeavePage({ currentUser }) {
           {visibleRequests.length === 0 ? (
             <p className="empty">No leave requests in this view.</p>
           ) : (
-            <div className="table-wrap">
+            <div className="table-wrap" role="region" aria-labelledby="leave-history" tabIndex={0}>
               <table>
                 <thead>
                   <tr>

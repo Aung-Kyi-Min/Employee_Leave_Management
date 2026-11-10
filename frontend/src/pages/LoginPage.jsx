@@ -28,7 +28,9 @@ export default function LoginPage({ onLogin, sessionError }) {
   return (
     <main className="login-screen">
       <section className="login-card">
-        <p className="eyebrow">Employee Leave Management</p>
+        <div className="brand">
+          <p>Employee Leave Management</p>
+        </div>
         <h1>Sign in</h1>
         <p className="lede">
           Sign in with your employee account to access your profile and leave requests.
@@ -55,15 +57,12 @@ export default function LoginPage({ onLogin, sessionError }) {
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="password"
               required
             />
           </label>
           {(error || sessionError) ? <p className="form-error" role="alert">{error || sessionError}</p> : null}
           <button type="submit" disabled={pending}>{pending ? 'Signing in…' : 'Sign in'}</button>
         </form>
-
-
       </section>
     </main>
   )
