@@ -114,7 +114,8 @@ Submission, manager decisions and cancellation are written to `audit_logs`.
 Run `./mvnw test` from `backend/`. Tests start a real HTTP server and apply V1/V2 to isolated H2
 in PostgreSQL compatibility mode. They exercise authentication, CRUD, role restrictions,
 validation, duplicate conflicts, deactivation, logout, token expiry, password hashing/change,
-last-admin protection and reporting-cycle validation. These tests need no development database.
+last-admin protection and reporting-cycle validation. Leave API tests cover pending reservations,
+approval, rejection, cancellation, automatic approval, date validation, overlaps and role restrictions. These tests need no development database.
 H2 tests do not establish PostgreSQL runtime compatibility; run against PostgreSQL before deployment.
 
 ## Demo database records

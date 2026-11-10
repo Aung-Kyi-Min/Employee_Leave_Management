@@ -46,3 +46,15 @@ export const employeeApi = {
   list: (page = 0, signal) => request(`/employees?page=${page}&size=20`, { signal }),
   departments: (signal) => request('/departments', { signal }),
 }
+
+export const leaveApi = {
+  types: (signal) => request('/leave-types', { signal }),
+  balances: (year, signal) => request(`/leave-balances?year=${year}`, { signal }),
+  mine: (signal) => request('/leave-requests', { signal }),
+  assigned: (signal) => request('/leave-requests/assigned', { signal }),
+  create: (body) => request('/leave-requests', { method: 'POST', body }),
+  cancel: (id) => request(`/leave-requests/${id}/cancel`, { method: 'POST' }),
+  decide: (id, decision, comments) => request(`/leave-requests/${id}/decision`, {
+    method: 'POST', body: { decision, comments },
+  }),
+}

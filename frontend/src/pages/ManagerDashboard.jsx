@@ -1,110 +1,72 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { leaveApi } from '../api/client'
 import DashboardSummary from '../components/DashboardSummary'
-import { employees, leaveTypes, seedLeaveRequests } from '../data/mock'
 import { formatDate, statusLabel } from '../format'
 
-const sampleTeam = employees.filter((employee) => employee.manager === 'Aung Kyi Min')
-const sampleRequests = seedLeaveRequests.filter((request) =>
-  sampleTeam.some((employee) => employee.employeeId === request.employeeId),
-)
-const filters = ['PENDING', 'ALL', 'APPROVED', 'REJECTED', 'CANCELLED']
-
 export default function ManagerDashboard() {
-  const [requests, setRequests] = useState(sampleRequests)
-  const [filter, setFilter] = useState('PENDING')
+  const [requests, setRequests] = useState([])
+  const [comments, setComments] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(null)
+  const [error, setError] = useState('')
   const [feedback, setFeedback] = useState('')
-  const pendingCount = requests.filter((request) => request.status === 'PENDING').length
-  const approvedCount = requests.filter((request) => request.status === 'APPROVED').length
-  const visibleRequests = filter === 'ALL' ? requests : requests.filter((request) => request.status === filter)
+  const [attempt, setAttempt] = useState(0)
 
-  function reviewRequest(requestId, status) {
-    setRequests((previous) => previous.map((request) =>
-      request.requestId === requestId && request.status === 'PENDING' ? { ...request, status } : request,
-    ))
-    setFeedback(`Sample request ${statusLabel(status).toLowerCase()}.`)
+  useEffect(() => {
+    const controller = new AbortController()
+    leaveApi.assigned(controller.signal).then(setRequests).catch((err) => {
+      if (err.name !== 'AbortError') setError(err.message)
+    }).finally(() => { if (!controller.signal.aborted) setLoading(false) })
+    return () => controller.abort()
+  }, [attempt])
+
+  async function reviewRequest(id, decision) {
+    setBusy(id)
+    setError('')
+    setFeedback('')
+    try {
+      await leaveApi.decide(id, decision, comments[id]?.trim() || '')
+      setRequests((previous) => previous.filter((item) => item.id !== id))
+      setFeedback(`Request ${statusLabel(decision).toLowerCase()}.`)
+    } catch (err) { setError(err.message) }
+    finally { setBusy(null) }
   }
 
-  return (
-    <>
-      <div className="page-heading">
-        <div className="dashboard-title">
-          <h1>Manager dashboard</h1>
-          <span className="badge dashboard-demo">Demo data</span>
-        </div>
-        <p className="lede">Review sample team leave requests. Demo decisions reset when you leave this dashboard.</p>
+  return <>
+    <div className="page-heading">
+      <h1>Manager dashboard</h1>
+      <p className="lede">Review pending leave requests assigned to you.</p>
+    </div>
+    <DashboardSummary label="Approval queue" metrics={[
+      { title: 'Pending requests', value: loading ? '…' : requests.length, note: 'Awaiting your decision' },
+      { title: 'Requested days', value: loading ? '…' : requests.reduce((sum, item) => sum + item.totalDays, 0), note: 'Weekdays in pending requests' },
+    ]} />
+    <section className="panel" aria-labelledby="team-requests">
+      <div className="panel-head">
+        <h2 id="team-requests">Assigned requests</h2>
+        <button className="ghost" disabled={loading || busy !== null} onClick={() => { setLoading(true); setError(''); setAttempt((value) => value + 1) }}>Refresh</button>
       </div>
-
-      <DashboardSummary label="Sample team overview" metrics={[
-        { title: 'Team members', value: sampleTeam.length, note: 'Sample direct reports' },
-        { title: 'Pending requests', value: pendingCount, note: 'Awaiting review' },
-        { title: 'Approved requests', value: approvedCount, note: 'In the sample history' },
-      ]} />
-
-      <div className="dashboard-layout">
-        <section className="panel" aria-labelledby="team-requests">
-          <h2 id="team-requests">Team requests</h2>
-          <div className="filters dashboard-filters" role="group" aria-label="Filter team requests by status">
-            {filters.map((status) => (
-              <button
-                key={status}
-                type="button"
-                className={filter === status ? 'chip active' : 'chip'}
-                aria-pressed={filter === status}
-                onClick={() => setFilter(status)}
-              >
-                {statusLabel(status)}
-              </button>
-            ))}
+      {error && <p className="form-error" role="alert">{error}</p>}
+      {feedback && <p className="form-success" role="status">{feedback}</p>}
+      {loading ? <p role="status">Loading requests…</p> : requests.length ? <ul className="dashboard-list">
+        {requests.map((item) => <li className="dashboard-row" key={item.id}>
+          <div className="dashboard-row-head">
+            <strong className="name">{item.employeeName}</strong>
+            <span className="badge pending">Pending</span>
           </div>
-
-          {feedback && <p className="form-success dashboard-feedback" role="status">{feedback}</p>}
-          {visibleRequests.length ? (
-            <ul className="dashboard-list">
-              {visibleRequests.map((request) => {
-                const employee = sampleTeam.find((person) => person.employeeId === request.employeeId)
-                const type = leaveTypes.find((item) => item.leaveTypeId === request.leaveTypeId)
-
-                return (
-                  <li className="dashboard-row" key={request.requestId}>
-                    <div className="dashboard-row-head">
-                      <div>
-                        <strong className="name">{employee.fullName}</strong>
-                        <p className="dashboard-meta">{type?.leaveName ?? 'Leave'} · {request.totalDays} {request.totalDays === 1 ? 'day' : 'days'}</p>
-                      </div>
-                      <span className={`badge ${request.status.toLowerCase()}`}>{statusLabel(request.status)}</span>
-                    </div>
-                    <p className="dashboard-request-dates">
-                      <time dateTime={request.startDate}>{formatDate(request.startDate)}</time>
-                      {request.endDate !== request.startDate && (
-                        <> – <time dateTime={request.endDate}>{formatDate(request.endDate)}</time></>
-                      )}
-                    </p>
-                    <p className="dashboard-meta">Reason · {request.reason}</p>
-                    {request.status === 'PENDING' && (
-                      <div className="dashboard-actions">
-                        <button type="button" onClick={() => reviewRequest(request.requestId, 'APPROVED')}>Approve</button>
-                        <button type="button" className="ghost" onClick={() => reviewRequest(request.requestId, 'REJECTED')}>Reject</button>
-                      </div>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          ) : <p className="empty">No sample requests in this view.</p>}
-        </section>
-
-        <section className="panel" aria-labelledby="team-members">
-          <h2 id="team-members">Direct reports</h2>
-          <ul className="dashboard-list">
-            {sampleTeam.map((employee) => (
-              <li className="dashboard-row" key={employee.employeeId}>
-                <strong className="name">{employee.fullName}</strong>
-                <p className="dashboard-meta">{employee.jobTitle} · {employee.department}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
-    </>
-  )
+          <p className="dashboard-meta">{item.leaveType} · {item.totalDays} days</p>
+          <p>{formatDate(item.startDate)} – {formatDate(item.endDate)}</p>
+          <p className="reason">{item.reason || 'No reason provided'}</p>
+          <label>Review comments
+            <textarea maxLength={2000} value={comments[item.id] || ''}
+              onChange={(event) => setComments((previous) => ({ ...previous, [item.id]: event.target.value }))} />
+          </label>
+          <div className="dashboard-actions">
+            <button disabled={busy !== null} onClick={() => reviewRequest(item.id, 'APPROVED')}>Approve</button>
+            <button className="ghost" disabled={busy !== null} onClick={() => reviewRequest(item.id, 'REJECTED')}>Reject</button>
+          </div>
+        </li>)}
+      </ul> : <p className="empty">No pending requests assigned to you.</p>}
+    </section>
+  </>
 }

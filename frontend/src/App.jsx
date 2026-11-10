@@ -99,7 +99,7 @@ function App() {
     <main>
       {activePage === 'admin' && <AdminDashboard onOpenDirectory={() => setPage('employees')} />}
       {activePage === 'manager' && <ManagerDashboard />}
-      {activePage === 'leave' && <LeavePage key={currentUser.id} currentUser={{ ...currentUser, employeeId: currentUser.id }} />}
+      {activePage === 'leave' && <LeavePage key={currentUser.id} />}
       {activePage === 'employees' && <EmployeesPage currentUser={currentUser} />}
     </main>
   </div>
