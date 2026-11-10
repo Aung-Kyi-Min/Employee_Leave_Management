@@ -1,13 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { employeeApi } from '../api/client'
-
-function formatDate(value) {
-  return new Intl.DateTimeFormat('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(`${value}T00:00:00`))
-}
+import { formatDate } from '../format'
 
 export default function EmployeesPage({ currentUser }) {
   const [query, setQuery] = useState('')
@@ -83,10 +76,46 @@ export default function EmployeesPage({ currentUser }) {
 
   const activeCount = employees.filter((employee) => employee.isActive).length
 
+  if (!isAdmin) {
+    const employee = employees[0]
+    const initials = employee?.fullName.trim().split(/\s+/).slice(0, 2)
+      .map(([initial]) => initial).join('').toUpperCase()
+
+    return (
+      <>
+        <div className="page-heading">
+          <h1>My profile</h1>
+        </div>
+
+        {employee ? (
+          <section className="panel profile-card" aria-labelledby="profile-name">
+            <div className="profile-header">
+              <div className="avatar" aria-hidden="true">{initials}</div>
+              <div className="profile-identity">
+                <h2 id="profile-name">{employee.fullName}</h2>
+                <p>{employee.jobTitle} · {employee.role}</p>
+              </div>
+              <span className={employee.isActive ? 'badge active' : 'badge inactive'}>
+                {employee.isActive ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+            <dl className="profile-details">
+              <div><dt>Employee number</dt><dd>{employee.employeeNumber}</dd></div>
+              <div><dt>Work email</dt><dd>{employee.email}</dd></div>
+              <div><dt>Department</dt><dd>{employee.department}</dd></div>
+              <div><dt>Manager</dt><dd>{employee.manager ?? '—'}</dd></div>
+              <div><dt>Hire date</dt><dd>{formatDate(employee.hireDate)}</dd></div>
+            </dl>
+          </section>
+        ) : <p role="status">Loading profile…</p>}
+      </>
+    )
+  }
+
   return (
     <>
       <div className="page-heading">
-        <h1>{isAdmin ? 'Employees' : 'My profile'}</h1>
+        <h1>Employees</h1>
       </div>
 
       <section className="summary">
@@ -106,7 +135,7 @@ export default function EmployeesPage({ currentUser }) {
 
       <section className="panel">
         <div className="panel-head">
-          <h2>{isAdmin ? 'Directory' : 'Employee details'}</h2>
+          <h2 id="employee-directory">Directory</h2>
           <input
             type="search"
             value={query}
@@ -123,7 +152,7 @@ export default function EmployeesPage({ currentUser }) {
         ) : visibleEmployees.length === 0 ? (
           <p className="empty">No employees match that search.</p>
         ) : (
-          <div className="table-wrap">
+          <div className="table-wrap" role="region" aria-labelledby="employee-directory" tabIndex={0}>
             <table>
               <thead>
                 <tr>
@@ -164,11 +193,11 @@ export default function EmployeesPage({ currentUser }) {
             </table>
           </div>
         )}
-        {isAdmin && <nav className="pagination" aria-label="Employee pages">
+        <nav className="pagination" aria-label="Employee pages">
           <button type="button" disabled={loading || page === 0} onClick={() => { setQuery(''); setPage(page - 1) }}>Previous</button>
           <span>Page {page + 1} · Search applies to this page</span>
           <button type="button" disabled={loading || Boolean(error) || rows.length < 20} onClick={() => { setQuery(''); setPage(page + 1) }}>Next</button>
-        </nav>}
+        </nav>
       </section>
     </>
   )
