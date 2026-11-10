@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{baseUrl}}/api/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "zay.demo@example.com",
+      "password": "DemoPassword123!"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Employee login succeeded', function () { pm.response.to.have.status(200); });
+      if (pm.response.code === 200) pm.environment.set('employeeToken', pm.response.json().accessToken);
+    language: text/javascript
+order: 1000

@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{baseUrl}}/api/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "aung.demo@example.com",
+      "password": "DemoPassword123!"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Manager login succeeded', function () { pm.response.to.have.status(200); });
+      if (pm.response.code === 200) pm.environment.set('managerToken', pm.response.json().accessToken);
+    language: text/javascript
+order: 2000

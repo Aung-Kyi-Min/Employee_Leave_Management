@@ -5,3 +5,9 @@ workspace:
 localResources:
   specs:
     - ../docs/api/openapi.json
+
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
+cloudResources:
+  collections:
+    ../postman/collections/Employee Leave Management - Leave API: 8e8b39a4-c44b-4663-a0e3-c0faacd76719

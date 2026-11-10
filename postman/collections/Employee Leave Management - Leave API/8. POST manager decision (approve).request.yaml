@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/api/leave-requests/{{requestId}}/decision"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "decision": "APPROVED",
+      "comments": "Approved for Postman testing"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{managerToken}}"
+order: 8000

@@ -1,0 +1,25 @@
+$kind: http-request
+url: "{{baseUrl}}/api/leave-requests"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "leaveTypeId": {{annualTypeId}},
+      "startDate": "2026-12-22",
+      "endDate": "2026-12-23",
+      "reason": "Postman API approval test"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{employeeToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Request created', function () { pm.response.to.have.status(201); });
+      if (pm.response.code === 201) pm.environment.set('requestId', pm.response.json().id);
+    language: text/javascript
+order: 5000

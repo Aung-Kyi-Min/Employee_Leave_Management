@@ -1,0 +1,6 @@
+$kind: collection
+description: Local Postman flow for leave types, balances, employee requests, manager decisions, and cancellation. Login requests capture generated tokens into the selected environment.
+variables:
+  baseUrl: ""
+  employeeToken: ""
+  managerToken: ""

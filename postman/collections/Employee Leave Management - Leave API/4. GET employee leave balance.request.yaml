@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/api/leave-balances?year={{leaveYear}}"
+method: GET
+queryParams:
+  year: "{{leaveYear}}"
+auth:
+  type: bearer
+  credentials:
+    token: "{{employeeToken}}"
+order: 4000

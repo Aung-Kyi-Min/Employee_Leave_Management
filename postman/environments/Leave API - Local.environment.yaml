@@ -1,0 +1,16 @@
+name: Leave API - Local
+values:
+  - key: baseUrl
+    value: 'http://localhost:8080'
+  - key: leaveYear
+    value: '2026'
+  - key: employeeToken
+    value: ''
+  - key: managerToken
+    value: ''
+  - key: annualTypeId
+    value: ''
+  - key: requestId
+    value: ''
+  - key: cancelRequestId
+    value: ''

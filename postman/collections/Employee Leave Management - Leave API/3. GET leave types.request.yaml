@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/api/leave-types"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{employeeToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Leave types returned', function () { pm.response.to.have.status(200); });
+      if (pm.response.code === 200) {
+        const annual = pm.response.json().find(x => x.name === 'Postman Demo - Annual Leave');
+        if (annual) pm.environment.set('annualTypeId', annual.id);
+      }
+    language: text/javascript
+order: 3000
